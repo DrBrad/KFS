@@ -192,7 +192,7 @@ impl Filesystem for KFS {
             999995,  // free inodes
             512,     // block size
             255,     // maximum name length
-            0,       // filesystem ID
+            0       // filesystem ID
         );
     }
 }
