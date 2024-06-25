@@ -7,4 +7,5 @@ edition = "2021"
 #sudo apt-get install fuse libfuse-dev
 
 [dependencies]
+bencode = { path = "/home/brad/CLionProjects/BencodeRust" }
 fuser = "0.14.0"
