@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 use std::time::{Duration, UNIX_EPOCH};
 use bencode::variables::bencode_array::{AddArray, BencodeArray};
-use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, Request};
+use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyStatfs, Request};
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
 
@@ -161,5 +161,19 @@ impl Filesystem for KFS {
         }
 
         reply.ok();
+    }
+
+    fn statfs(&mut self, _req: &Request, _ino: u64, reply: ReplyStatfs) {
+        // Example values for total blocks, free blocks, available blocks, etc.
+        reply.statfs(
+            1000000, // total blocks
+            500000,  // free blocks
+            500000,  // available blocks
+            1000000, // total inodes
+            999995,  // free inodes
+            512,     // block size
+            255,     // maximum name length
+            0,       // filesystem ID
+        );
     }
 }
