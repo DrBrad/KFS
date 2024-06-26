@@ -26,7 +26,7 @@ impl KDirectory {
     }
 
     pub fn add_file(&mut self, file: &dyn File) {
-        self.files.push(file.clone_dyn());
+        //self.files.push(file.clone_dyn());
     }
 
     pub fn len(&self) -> usize {

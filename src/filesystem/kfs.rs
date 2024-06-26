@@ -8,14 +8,16 @@ use crate::filesystem::kfile::KFile;
 const TTL: Duration = Duration::from_secs(1); // 1 second
 
 pub struct KFS {
-    files: Vec<Box<dyn File>>
+    files: Vec<Box<dyn File>>,
+    ino: u64
 }
 
 impl KFS {
 
     pub fn new(files: Vec<Box<dyn File>>) -> Self {
         Self {
-            files
+            files,
+            ino: 0
         }
     }
 }
