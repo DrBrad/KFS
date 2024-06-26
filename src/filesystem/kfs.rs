@@ -1,20 +1,49 @@
+use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
 use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request};
 use crate::filesystem::inter::file::File;
+use crate::filesystem::inter::node::{Data, Node};
 use crate::filesystem::kdirectory::KDirectory;
 use crate::filesystem::kfile::KFile;
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
 
 pub struct KFS {
-    files: Vec<Box<dyn File>>,
-    ino: u64
+    files: Arc<Mutex<HashMap<u64, Node>>>,
+    next_ino: u64
 }
 
 impl KFS {
 
-    pub fn new(files: Vec<Box<dyn File>>) -> Self {
+    pub fn new(mut files: HashMap<u64, Node>) -> Self {
+        let mut children = HashSet::new();
+
+        for ino in files.keys() {
+            if files.get(ino).unwrap().parent == 1 {
+                children.insert(ino.clone());
+            }
+        }
+
+        files.insert(1, Node {
+            data: Data {
+                name: ".".to_string(),
+                kind: FileType::Directory,
+                size: 0
+            },
+            children: Some(children),
+            parent: 0
+        });
+
+        let next_ino = files.len() as u64;
+
+        Self {
+            files: Arc::new(Mutex::new(files)),
+            next_ino
+        }
+
+        /*
         let ino = Self::calculate_inodes(&files)+1;
 
         println!("INO: {}", ino);
@@ -23,35 +52,27 @@ impl KFS {
             files,
             ino
         }
-    }
-
-    fn calculate_inodes(files: &Vec<Box<dyn File>>) -> u64 {
-        let mut len = files.len() as u64;
-
-        for file in files {
-            if file.get_type() == FileType::Directory {
-                len += Self::calculate_inodes(file.as_any().downcast_ref::<KDirectory>().unwrap().get_files());
-            }
-        }
-        len
+        */
     }
 }
 
 impl Filesystem for KFS {
 
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
-        if parent == 1 {
-            for i in 0..self.files.len() {
-                if self.files.get(i).unwrap().get_name().as_str() == name.to_str().unwrap() {
+        let children = self.files.lock().as_ref().unwrap().get(&parent).unwrap().children.as_ref().unwrap().clone();
+
+        for child_ino in children.iter() {
+            if self.files.lock().unwrap().get(child_ino).unwrap().data.name == name.to_str().unwrap() {
+                if let child_node = self.files.lock().as_ref().unwrap().get(child_ino).unwrap() {
                     reply.entry(&TTL, &FileAttr {
-                        ino: (i as u64)+2,
-                        size: self.files.get(i).unwrap().get_size(),
+                        ino: *child_ino,
+                        size: child_node.data.size,
                         blocks: 1,
                         atime: UNIX_EPOCH, // 1970-01-01 00:00:00
                         mtime: UNIX_EPOCH,
                         ctime: UNIX_EPOCH,
                         crtime: UNIX_EPOCH,
-                        kind: self.files.get(i).unwrap().get_type(),
+                        kind: child_node.data.kind,
                         perm: 0o777,
                         nlink: 1,
                         uid: 501,
@@ -60,9 +81,9 @@ impl Filesystem for KFS {
                         flags: 0,
                         blksize: 512
                     }, 0);
-
                     return;
                 }
+                break;
             }
         }
 
@@ -70,44 +91,25 @@ impl Filesystem for KFS {
     }
 
     fn getattr(&mut self, _req: &Request<'_>, ino: u64, reply: ReplyAttr) {
-        if ino == 1 {
+        if let child_node = self.files.lock().as_ref().unwrap().get(&ino).unwrap() {
             reply.attr(&TTL, &FileAttr {
-                ino: 1,
-                size: 0,
-                blocks: 0,
+                ino,
+                size: child_node.data.size,
+                blocks: 1,
                 atime: UNIX_EPOCH, // 1970-01-01 00:00:00
                 mtime: UNIX_EPOCH,
                 ctime: UNIX_EPOCH,
                 crtime: UNIX_EPOCH,
-                kind: FileType::Directory,
-                perm: 0o755,
-                nlink: 2,
+                kind: child_node.data.kind,
+                perm: 0o777,
+                nlink: 1,
                 uid: 501,
                 gid: 20,
                 rdev: 0,
                 flags: 0,
                 blksize: 512
             });
-            return;
         }
-
-        reply.attr(&TTL, &FileAttr {
-            ino,
-            size: self.files.get((ino as usize)-2).unwrap().get_size(),
-            blocks: 1,
-            atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-            mtime: UNIX_EPOCH,
-            ctime: UNIX_EPOCH,
-            crtime: UNIX_EPOCH,
-            kind: self.files.get((ino as usize)-2).unwrap().get_type(),
-            perm: 0o777,
-            nlink: 1,
-            uid: 501,
-            gid: 20,
-            rdev: 0,
-            flags: 0,
-            blksize: 512
-        });
     }
 
     fn read(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, _size: u32, _flags: i32, _lock: Option<u64>, reply: ReplyData) {
@@ -116,35 +118,38 @@ impl Filesystem for KFS {
             return;
         }
 
+        /*
         match self.files.get((ino as usize)-2).unwrap().get_type() {
             FileType::RegularFile => {
                 reply.data(&"HELLO WORLD".as_bytes()[offset as usize..]);
             },
             _ => reply.error(2)
         }
+        */
+
+        reply.error(2);
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
-        if ino != 1 {
-            reply.error(2);
-            return;
+        if offset == 0 {
+            reply.add(1, 1, FileType::Directory, ".");
+            reply.add(self.files.lock().as_ref().unwrap().get(&ino).unwrap().parent, 2, FileType::Directory, "..");
         }
 
-        let default = [ ".", ".." ];
 
-        for i in (offset as usize)..self.files.len()+2 {
-            if i < 2 {
-                reply.add(1, (i as i64)+1, FileType::Directory, default[i]);
-                continue;
+        let children = self.files.lock().as_ref().unwrap().get(&ino).unwrap().children.as_ref().unwrap().clone();
+        let mut i = offset;
+        for child_ino in children.iter().skip(i as usize) {
+            if let child_node = self.files.lock().as_ref().unwrap().get(child_ino).unwrap() {
+                reply.add(*child_ino, i+2, child_node.data.kind, child_node.data.name.as_str());
             }
-
-            reply.add(i as u64, (i as i64)+1, self.files.get(i-2).unwrap().get_type(), self.files.get(i-2).unwrap().get_name());
         }
 
         reply.ok();
     }
 
     fn mkdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, reply: ReplyEntry) {
+        /*
         for i in 0..self.files.len() {
             if self.files.get(i).unwrap().get_type() == FileType::Directory &&
                     self.files.get(i).unwrap().get_name().as_str() == name.to_str().unwrap() {
@@ -152,6 +157,8 @@ impl Filesystem for KFS {
                 return;
             }
         }
+
+        println!("{}", parent);
 
         self.files.push(Box::new(KDirectory::new(name.to_str().unwrap())));
         self.ino += 1;
@@ -173,11 +180,13 @@ impl Filesystem for KFS {
             flags: 0,
             blksize: 512
         }, 0);
+        */
     }
 
 
 
     fn create(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
+        /*
         println!("CREATE FILE");
 
         self.files.push(Box::new(KFile::new(name.to_str().unwrap(), 0)));
@@ -200,6 +209,7 @@ impl Filesystem for KFS {
             flags: 0,
             blksize: 512
         }, 0, self.ino, 0);
+        */
     }
 
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
