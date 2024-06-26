@@ -1,3 +1,4 @@
+use std::any::Any;
 use fuser::FileType;
 use crate::filesystem::inter::file::File;
 
@@ -28,5 +29,9 @@ impl File for KFile {
 
     fn get_size(&self) -> u64 {
         self.size
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

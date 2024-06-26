@@ -9,12 +9,20 @@ use crate::filesystem::kfile::KFile;
 fn main() {
     let mut files: Vec<Box<dyn File>> = Vec::new();
     files.push(Box::new(KFile::new("hello_world.txt", 100)));
-    files.push(Box::new(KDirectory::new("test")));
 
+    let mut dir = KDirectory::new("test");
+    dir.add_file(Box::new(KFile::new("new.txt", 100)));
+    files.push(Box::new(dir));
+
+
+
+
+    /*
     for i in 0..files.len() {
         let file = files.get(i).unwrap();
         println!("{} {}", file.get_size(), file.get_name());
     }
+    */
 
     let mountpoint = "/media/test";
     let mut options = vec![

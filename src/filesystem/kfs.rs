@@ -15,10 +15,25 @@ pub struct KFS {
 impl KFS {
 
     pub fn new(files: Vec<Box<dyn File>>) -> Self {
+        let ino = Self::calculate_inodes(&files)+1;
+
+        println!("INO: {}", ino);
+
         Self {
             files,
-            ino: 0
+            ino
         }
+    }
+
+    fn calculate_inodes(files: &Vec<Box<dyn File>>) -> u64 {
+        let mut len = files.len() as u64;
+
+        for file in files {
+            if file.get_type() == FileType::Directory {
+                len += Self::calculate_inodes(file.as_any().downcast_ref::<KDirectory>().unwrap().get_files());
+            }
+        }
+        len
     }
 }
 
@@ -139,11 +154,10 @@ impl Filesystem for KFS {
         }
 
         self.files.push(Box::new(KDirectory::new(name.to_str().unwrap())));
-
-        let ino = (self.files.len() as u64)+1;
+        self.ino += 1;
 
         reply.entry(&TTL, &FileAttr {
-            ino,
+            ino: self.ino,
             size: 0,
             blocks: 1,
             atime: UNIX_EPOCH, // 1970-01-01 00:00:00
@@ -167,11 +181,10 @@ impl Filesystem for KFS {
         println!("CREATE FILE");
 
         self.files.push(Box::new(KFile::new(name.to_str().unwrap(), 0)));
-
-        let ino = (self.files.len() as u64)+1;
+        self.ino += 1;
 
         reply.created(&TTL, &FileAttr {
-            ino,
+            ino: self.ino,
             size: 0,
             blocks: 1,
             atime: UNIX_EPOCH, // 1970-01-01 00:00:00
@@ -186,7 +199,7 @@ impl Filesystem for KFS {
             rdev: 0,
             flags: 0,
             blksize: 512
-        }, 0, ino, 0);
+        }, 0, self.ino, 0);
     }
 
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {

@@ -1,3 +1,4 @@
+use std::any::Any;
 use fuser::FileType;
 use crate::filesystem::inter::file::File;
 
@@ -15,18 +16,16 @@ impl KDirectory {
         }
     }
 
-    /*
-    pub fn get_files(&self) -> Vec<Box<dyn File>> {
-        self.files.clone()
+    pub fn get_files(&self) -> &Vec<Box<dyn File>> {
+        &self.files
     }
-    */
 
     pub fn get_file(&self, index: usize) -> &Box<dyn File> {
         self.files.get(index).unwrap()
     }
 
-    pub fn add_file(&mut self, file: &dyn File) {
-        //self.files.push(file.clone_dyn());
+    pub fn add_file(&mut self, file: Box<dyn File>) {
+        self.files.push(file);
     }
 
     pub fn len(&self) -> usize {
@@ -46,5 +45,9 @@ impl File for KDirectory {
 
     fn get_size(&self) -> u64 {
         0
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
