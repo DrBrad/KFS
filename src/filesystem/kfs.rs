@@ -1,7 +1,9 @@
 use std::ffi::OsStr;
 use std::time::{Duration, UNIX_EPOCH};
-use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEntry, ReplyStatfs, ReplyWrite, Request};
+use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request};
 use crate::filesystem::inter::file::File;
+use crate::filesystem::kdirectory::KDirectory;
+use crate::filesystem::kfile::KFile;
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
 
@@ -125,43 +127,64 @@ impl Filesystem for KFS {
         reply.ok();
     }
 
-
-
-    fn create(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
-        println!("CREATE FILE");
-        /*
-        let mut files = self.files.lock().unwrap();
-
-        if parent != 1 {
-            reply.error(ENOENT);
-            return;
+    fn mkdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, reply: ReplyEntry) {
+        for i in 0..self.files.len() {
+            if self.files.get(i).unwrap().get_type() == FileType::Directory &&
+                    self.files.get(i).unwrap().get_name().as_str() == name.to_str().unwrap() {
+                reply.error(17);
+                return;
+            }
         }
 
-        let ino = self.next_ino;
-        self.next_ino += 1;
+        self.files.push(Box::new(KDirectory::new(name.to_str().unwrap())));
 
-        let attr = FileAttr {
+        let ino = (self.files.len() as u64)+1;
+
+        reply.entry(&TTL, &FileAttr {
             ino,
             size: 0,
-            blocks: 0,
-            atime: SystemTime::now(),
-            mtime: SystemTime::now(),
-            ctime: SystemTime::now(),
-            crtime: SystemTime::now(),
-            kind: FileType::RegularFile,
-            perm: mode as u16,
+            blocks: 1,
+            atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+            mtime: UNIX_EPOCH,
+            ctime: UNIX_EPOCH,
+            crtime: UNIX_EPOCH,
+            kind: FileType::Directory,
+            perm: 0o777,
             nlink: 1,
             uid: 501,
             gid: 20,
             rdev: 0,
             flags: 0,
-            blksize: BLOCK_SIZE as u32,
-        };
+            blksize: 512
+        }, 0);
+    }
 
-        files.insert(ino, FileData { attr, data: Vec::new() });
 
-        reply.created(&TTL, &attr, 0, ino, 0);
-        */
+
+    fn create(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
+        println!("CREATE FILE");
+
+        self.files.push(Box::new(KFile::new(name.to_str().unwrap(), 0)));
+
+        let ino = (self.files.len() as u64)+1;
+
+        reply.created(&TTL, &FileAttr {
+            ino,
+            size: 0,
+            blocks: 1,
+            atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+            mtime: UNIX_EPOCH,
+            ctime: UNIX_EPOCH,
+            crtime: UNIX_EPOCH,
+            kind: FileType::RegularFile,
+            perm: 0o777,
+            nlink: 1,
+            uid: 501,
+            gid: 20,
+            rdev: 0,
+            flags: 0,
+            blksize: 512
+        }, 0, ino, 0);
     }
 
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
