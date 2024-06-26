@@ -136,12 +136,12 @@ impl Filesystem for KFS {
             reply.add(self.files.lock().as_ref().unwrap().get(&ino).unwrap().parent, 2, FileType::Directory, "..");
         }
 
-
         let children = self.files.lock().as_ref().unwrap().get(&ino).unwrap().children.as_ref().unwrap().clone();
         let mut i = offset;
         for child_ino in children.iter().skip(i as usize) {
             if let child_node = self.files.lock().as_ref().unwrap().get(child_ino).unwrap() {
                 reply.add(*child_ino, i+2, child_node.data.kind, child_node.data.name.as_str());
+                i += 1;
             }
         }
 

@@ -56,7 +56,6 @@ fn main() {
     });
 
 
-
     files.insert(5, Node {
         data: Data {
             name: "asd".to_string(),
@@ -66,14 +65,6 @@ fn main() {
         children: Some(HashSet::new()),
         parent: 4
     });
-
-
-    /*
-    for i in 0..files.len() {
-        let file = files.get(i).unwrap();
-        println!("{} {}", file.get_size(), file.get_name());
-    }
-    */
 
     let mountpoint = "/media/test2";
     let mut options = vec![
