@@ -6,14 +6,8 @@ version = 3
 name = "KFS"
 version = "0.1.0"
 dependencies = [
- "bencode",
  "fuser",
- "log",
 ]
-
-[[package]]
-name = "bencode"
-version = "0.1.0"
 
 [[package]]
 name = "byteorder"
