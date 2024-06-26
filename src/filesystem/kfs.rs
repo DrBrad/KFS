@@ -2,6 +2,7 @@ use std::ffi::OsStr;
 use std::time::{Duration, UNIX_EPOCH};
 use bencode::variables::bencode_array::{AddArray, BencodeArray};
 use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyStatfs, Request};
+use log::error;
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
 
@@ -144,11 +145,17 @@ impl Filesystem for KFS {
     }
 
     fn read(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, _size: u32, _flags: i32, _lock: Option<u64>, reply: ReplyData) {
-        //if ino == 2 {
-            //reply.data(&HELLO_TXT_CONTENT.as_bytes()[offset as usize..]);
-        //} else {
-            reply.error(2);
-        //}
+        if ino != 1 {
+            match self.files.get_object((ino as usize)-2).unwrap().get_string("type").unwrap() {
+                "file" => {
+                reply.data(&"HELLO WORLD".as_bytes()[offset as usize..]);
+                },
+                _ => reply.error(2)
+            }
+            return;
+        }
+
+        reply.error(2);
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {

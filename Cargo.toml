@@ -9,3 +9,4 @@ edition = "2021"
 [dependencies]
 bencode = { path = "/home/brad/CLionProjects/BencodeRust" }
 fuser = "0.14.0"
+log = "0.4.21"
