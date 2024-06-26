@@ -33,6 +33,7 @@ fn main() {
     dir.put("name", "test");
     dir.put("type", "directory");
     ben.add(dir);
+    */
 
 
     let mountpoint = "/media/test";
@@ -41,6 +42,5 @@ fn main() {
         MountOption::FSName("KFS".to_string())
         //MountOption::AutoUnmount
     ];
-    fuser::mount2(KFS::new(ben), mountpoint, &options).unwrap();
-    */
+    fuser::mount2(KFS::new(files), mountpoint, &options).unwrap();
 }

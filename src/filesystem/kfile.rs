@@ -1,5 +1,5 @@
+use fuser::FileType;
 use crate::filesystem::inter::file::File;
-use crate::filesystem::inter::file_type::FileType;
 
 pub struct KFile {
     name: String,
@@ -23,7 +23,7 @@ impl File for KFile {
     }
 
     fn get_type(&self) -> FileType {
-        FileType::File
+        FileType::RegularFile
     }
 
     fn get_size(&self) -> u64 {

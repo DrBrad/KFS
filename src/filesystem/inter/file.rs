@@ -1,4 +1,4 @@
-use crate::filesystem::inter::file_type::FileType;
+use fuser::FileType;
 
 pub trait File {
 

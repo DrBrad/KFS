@@ -1,5 +1,5 @@
+use fuser::FileType;
 use crate::filesystem::inter::file::File;
-use crate::filesystem::inter::file_type::FileType;
 
 pub struct KDirectory {
     name: String

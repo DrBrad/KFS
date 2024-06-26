@@ -1,18 +1,17 @@
 use std::ffi::OsStr;
 use std::time::{Duration, UNIX_EPOCH};
-use bencode::variables::bencode_array::{AddArray, BencodeArray};
 use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyData, ReplyDirectory, ReplyEntry, ReplyStatfs, Request};
-use log::error;
+use crate::filesystem::inter::file::File;
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
 
 pub struct KFS {
-    files: BencodeArray
+    files: Vec<Box<dyn File>>
 }
 
 impl KFS {
 
-    pub fn new(mut files: BencodeArray) -> Self {
+    pub fn new(files: Vec<Box<dyn File>>) -> Self {
         Self {
             files
         }
@@ -25,49 +24,26 @@ impl Filesystem for KFS {
         if parent == 1 {
             println!("{}", name.to_str().unwrap());
 
-            for i in 0..self.files.size() {
-                if self.files.get_object(i).unwrap().get_string("name").unwrap() == name.to_str().unwrap() {
-                    match self.files.get_object(i).unwrap().get_string("type").unwrap() {
-                        "file" => {
-                            reply.entry(&TTL, &FileAttr {
-                                ino: (i as u64)+2,
-                                size: self.files.get_object(i).unwrap().get_number("size").unwrap(),
-                                blocks: 1,
-                                atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-                                mtime: UNIX_EPOCH,
-                                ctime: UNIX_EPOCH,
-                                crtime: UNIX_EPOCH,
-                                kind: FileType::RegularFile,
-                                perm: 0o777,
-                                nlink: 1,
-                                uid: 501,
-                                gid: 20,
-                                rdev: 0,
-                                flags: 0,
-                                blksize: 512
-                            }, 0);
-                        },
-                        "directory" => {
-                            reply.entry(&TTL, &FileAttr {
-                                ino: (i as u64)+2,
-                                size: 0,
-                                blocks: 0,
-                                atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-                                mtime: UNIX_EPOCH,
-                                ctime: UNIX_EPOCH,
-                                crtime: UNIX_EPOCH,
-                                kind: FileType::Directory,
-                                perm: 0o755,
-                                nlink: 2,
-                                uid: 501,
-                                gid: 20,
-                                rdev: 0,
-                                flags: 0,
-                                blksize: 512
-                            }, 0);
-                        },
-                        _ => reply.error(2)
-                    }
+            for i in 0..self.files.len() {
+                if self.files.get(i).unwrap().get_name().as_str() == name.to_str().unwrap() {
+                    reply.entry(&TTL, &FileAttr {
+                        ino: (i as u64)+2,
+                        size: self.files.get(i).unwrap().get_size(),
+                        blocks: 1,
+                        atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+                        mtime: UNIX_EPOCH,
+                        ctime: UNIX_EPOCH,
+                        crtime: UNIX_EPOCH,
+                        kind: self.files.get(i).unwrap().get_type(),
+                        perm: 0o777,
+                        nlink: 1,
+                        uid: 501,
+                        gid: 20,
+                        rdev: 0,
+                        flags: 0,
+                        blksize: 512
+                    }, 0);
+
                     return;
                 }
             }
@@ -100,62 +76,37 @@ impl Filesystem for KFS {
             return;
         }
 
-        let file = self.files.get_object((ino as usize)-2).unwrap();
-        match file.get_string("type").unwrap() {
-            "file" => {
-                reply.attr(&TTL, &FileAttr {
-                    ino,
-                    size: file.get_number("size").unwrap(),
-                    blocks: 1,
-                    atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-                    mtime: UNIX_EPOCH,
-                    ctime: UNIX_EPOCH,
-                    crtime: UNIX_EPOCH,
-                    kind: FileType::RegularFile,
-                    perm: 0o777,
-                    nlink: 1,
-                    uid: 501,
-                    gid: 20,
-                    rdev: 0,
-                    flags: 0,
-                    blksize: 512
-                });
-            },
-            "directory" => {
-                reply.attr(&TTL, &FileAttr {
-                    ino,
-                    size: 0,
-                    blocks: 0,
-                    atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-                    mtime: UNIX_EPOCH,
-                    ctime: UNIX_EPOCH,
-                    crtime: UNIX_EPOCH,
-                    kind: FileType::Directory,
-                    perm: 0o755,
-                    nlink: 2,
-                    uid: 501,
-                    gid: 20,
-                    rdev: 0,
-                    flags: 0,
-                    blksize: 512
-                });
-            },
-            _ => reply.error(2)
-        }
+        reply.attr(&TTL, &FileAttr {
+            ino,
+            size: self.files.get((ino as usize)-2).unwrap().get_size(),
+            blocks: 1,
+            atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+            mtime: UNIX_EPOCH,
+            ctime: UNIX_EPOCH,
+            crtime: UNIX_EPOCH,
+            kind: self.files.get((ino as usize)-2).unwrap().get_type(),
+            perm: 0o777,
+            nlink: 1,
+            uid: 501,
+            gid: 20,
+            rdev: 0,
+            flags: 0,
+            blksize: 512
+        });
     }
 
     fn read(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, _size: u32, _flags: i32, _lock: Option<u64>, reply: ReplyData) {
-        if ino != 1 {
-            match self.files.get_object((ino as usize)-2).unwrap().get_string("type").unwrap() {
-                "file" => {
-                reply.data(&"HELLO WORLD".as_bytes()[offset as usize..]);
-                },
-                _ => reply.error(2)
-            }
+        if ino == 1 {
+            reply.error(2);
             return;
         }
 
-        reply.error(2);
+        match self.files.get((ino as usize)-2).unwrap().get_type() {
+            FileType::RegularFile => {
+                reply.data(&"HELLO WORLD".as_bytes()[offset as usize..]);
+            },
+            _ => reply.error(2)
+        }
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
@@ -166,24 +117,13 @@ impl Filesystem for KFS {
 
         let default = [ ".", ".." ];
 
-        for i in (offset as usize)..self.files.size()+2 {
+        for i in (offset as usize)..self.files.len()+2 {
             if i < 2 {
                 reply.add(1, (i as i64)+1, FileType::Directory, default[i]);
                 continue;
             }
 
-            match self.files.get_object(i-2).unwrap().get_string("type").unwrap() {
-                "file" => {
-                    reply.add(i as u64, (i as i64)+1, FileType::RegularFile, self.files.get_object(i-2).unwrap().get_string("name").unwrap());
-                },
-                "directory" => {
-                    reply.add(i as u64, (i as i64)+1, FileType::Directory, self.files.get_object(i-2).unwrap().get_string("name").unwrap());
-                },
-                _ => {
-                    reply.error(2);
-                    return;
-                }
-            }
+            reply.add(i as u64, (i as i64)+1, self.files.get(i-2).unwrap().get_type(), self.files.get(i-2).unwrap().get_name());
         }
 
         reply.ok();
