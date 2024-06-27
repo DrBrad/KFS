@@ -146,6 +146,7 @@ impl Filesystem for KFS {
     }
 
     fn mkdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, reply: ReplyEntry) {
+        //USE parent for this
         /*
         for i in 0..self.files.len() {
             if self.files.get(i).unwrap().get_type() == FileType::Directory &&
