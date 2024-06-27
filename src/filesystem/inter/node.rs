@@ -1,5 +1,5 @@
-use std::collections::{BTreeMap, HashSet};
-use fuser::{FileAttr, FileType};
+use std::collections::{BTreeMap};
+use fuser::{FileType};
 
 pub struct Node {
     pub data: Data,

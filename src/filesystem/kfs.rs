@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
@@ -273,7 +273,14 @@ impl Filesystem for KFS {
     }
 
     fn rename(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, newparent: u64, newname: &OsStr, flags: u32, reply: ReplyEmpty) {
-        println!("RENAME");
+        let mut files = self.files.lock().unwrap();
+
+        let ino = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()).unwrap().clone();
+        files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(name.to_str().unwrap());
+
+        files.get_mut(&newparent).as_mut().unwrap().children.as_mut().unwrap().insert(newname.to_str().unwrap().to_string(), ino);
+
+        reply.ok();
     }
 
 
