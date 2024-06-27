@@ -33,7 +33,7 @@ impl KFS {
             parent: 0
         });
 
-        let next_ino = files.len() as u64;
+        let next_ino = (files.len() as u64)+1;
 
         Self {
             files: Arc::new(Mutex::new(files)),
@@ -56,31 +56,29 @@ impl KFS {
 impl Filesystem for KFS {
 
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
-        let children = self.files.lock().as_ref().unwrap().get(&parent).unwrap().children.as_ref().unwrap().clone();
+        let files = self.files.lock().unwrap();
+        //let children = self.files.lock().as_ref().unwrap().get(&parent).unwrap().children.as_ref().unwrap().clone();
 
-        for child_ino in children.iter() {
-            if self.files.lock().unwrap().get(child_ino).unwrap().data.name == name.to_str().unwrap() {
-                if let child_node = self.files.lock().as_ref().unwrap().get(child_ino).unwrap() {
-                    reply.entry(&TTL, &FileAttr {
-                        ino: *child_ino,
-                        size: child_node.data.size,
-                        blocks: 1,
-                        atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-                        mtime: UNIX_EPOCH,
-                        ctime: UNIX_EPOCH,
-                        crtime: UNIX_EPOCH,
-                        kind: child_node.data.kind,
-                        perm: 0o777,
-                        nlink: 1,
-                        uid: 501,
-                        gid: 20,
-                        rdev: 0,
-                        flags: 0,
-                        blksize: 512
-                    }, 0);
-                    return;
-                }
-                break;
+        for child_ino in files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().iter() {
+            if files.get(child_ino).as_ref().unwrap().data.name == name.to_str().unwrap() {
+                reply.entry(&TTL, &FileAttr {
+                    ino: *child_ino,
+                    size: files.get(child_ino).as_ref().unwrap().data.size,
+                    blocks: 1,
+                    atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+                    mtime: UNIX_EPOCH,
+                    ctime: UNIX_EPOCH,
+                    crtime: UNIX_EPOCH,
+                    kind: files.get(child_ino).as_ref().unwrap().data.kind,
+                    perm: 0o777,
+                    nlink: 1,
+                    uid: 501,
+                    gid: 20,
+                    rdev: 0,
+                    flags: 0,
+                    blksize: 512
+                }, 0);
+                return;
             }
         }
 
@@ -128,15 +126,17 @@ impl Filesystem for KFS {
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
+        let files = self.files.lock().unwrap();
+
         if offset == 0 {
             reply.add(1, 1, FileType::Directory, ".");
-            reply.add(self.files.lock().as_ref().unwrap().get(&ino).unwrap().parent, 2, FileType::Directory, "..");
+            reply.add(files.get(&ino).unwrap().parent, 2, FileType::Directory, "..");
         }
 
-        let children = self.files.lock().as_ref().unwrap().get(&ino).unwrap().children.as_ref().unwrap().clone();
+        let children = files.get(&ino).unwrap().children.as_ref().unwrap().clone();
         let mut i = offset;
         for child_ino in children.iter().skip(i as usize) {
-            if let child_node = self.files.lock().as_ref().unwrap().get(child_ino).unwrap() {
+            if let child_node = files.get(child_ino).unwrap() {
                 reply.add(*child_ino, i+2, child_node.data.kind, child_node.data.name.as_str());
                 i += 1;
             }
@@ -146,23 +146,32 @@ impl Filesystem for KFS {
     }
 
     fn mkdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, reply: ReplyEntry) {
-        //USE parent for this
-        /*
-        for i in 0..self.files.len() {
-            if self.files.get(i).unwrap().get_type() == FileType::Directory &&
-                    self.files.get(i).unwrap().get_name().as_str() == name.to_str().unwrap() {
+        let mut files = self.files.lock().unwrap();
+        for child_ino in files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().iter() {
+            if files.get(&child_ino).as_ref().unwrap().data.kind == FileType::Directory &&
+                    files.get(&child_ino).as_ref().unwrap().data.name.as_str() == name.to_str().unwrap() {
                 reply.error(17);
                 return;
             }
         }
 
-        println!("{}", parent);
+        let ino = self.next_ino;
 
-        self.files.push(Box::new(KDirectory::new(name.to_str().unwrap())));
-        self.ino += 1;
+        files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().insert(ino);
+
+        files.insert(self.next_ino, Node {
+            data: Data {
+                name: name.to_str().unwrap().to_string(),
+                kind: FileType::Directory,
+                size: 0
+            },
+            children: Some(HashSet::new()),
+            parent: parent
+        });
+        self.next_ino += 1;
 
         reply.entry(&TTL, &FileAttr {
-            ino: self.ino,
+            ino,
             size: 0,
             blocks: 1,
             atime: UNIX_EPOCH, // 1970-01-01 00:00:00
@@ -178,7 +187,6 @@ impl Filesystem for KFS {
             flags: 0,
             blksize: 512
         }, 0);
-        */
     }
 
 
