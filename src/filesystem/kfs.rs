@@ -245,8 +245,19 @@ impl Filesystem for KFS {
 
 
     fn unlink(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
-        println!("RM FILE");
-        //reply.error(ENOSYS);
+        let mut files = self.files.lock().unwrap();
+        let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
+
+        for ino in children.iter() {
+            if files.get(&ino).as_ref().unwrap().data.name.as_str() == name.to_str().unwrap() {
+                files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(&ino);
+                files.remove(&ino);
+                reply.ok();
+                return;
+            }
+        }
+
+        reply.error(38);
     }
 
     fn rmdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
