@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
-use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request};
+use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEmpty, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request};
 use crate::filesystem::inter::node::{Data, Node};
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
@@ -239,6 +239,25 @@ impl Filesystem for KFS {
         }
         */
     }
+
+
+
+
+    fn unlink(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
+        println!("RM FILE");
+        //reply.error(ENOSYS);
+    }
+
+    /// Remove a directory.
+    fn rmdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
+        println!("RM DIR");
+        //reply.error(ENOSYS);
+    }
+
+    fn rename(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, newparent: u64, newname: &OsStr, flags: u32, reply: ReplyEmpty) {
+        println!("RENAME");
+    }
+
 
     /*
     fn write(
