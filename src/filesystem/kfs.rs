@@ -268,7 +268,6 @@ impl Filesystem for KFS {
         files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(name.to_str().unwrap());
         files.remove(&ino);
         reply.ok();
-        //return;
 
         //reply.error(38);
     }
