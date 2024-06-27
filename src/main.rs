@@ -14,12 +14,26 @@ fn main() {
     dir.add_file(Box::new(KFile::new("new.txt", 100)));
     files.push(Box::new(dir));
     */
-
-
     let mut files = HashMap::new();
+
+    let mut children = BTreeMap::new();
+    children.insert("hello_world.txt".to_string(), 2 as u64);
+    children.insert("new.txt".to_string(), 3 as u64);
+    children.insert("test".to_string(), 4 as u64);
+
+    files.insert(1, Node {
+        data: Data {
+            //name: ".".to_string(),
+            kind: FileType::Directory,
+            size: 0
+        },
+        children: Some(children),
+        parent: 0
+    });
+
     files.insert(2, Node {
         data: Data {
-            name: "hello_world.txt".to_string(),
+            //name: "hello_world.txt".to_string(),
             kind: FileType::RegularFile,
             size: 3
         },
@@ -29,7 +43,7 @@ fn main() {
 
     files.insert(3, Node {
         data: Data {
-            name: "new.txt".to_string(),
+            //name: "new.txt".to_string(),
             kind: FileType::RegularFile,
             size: 3
         },
@@ -43,7 +57,7 @@ fn main() {
 
     files.insert(4, Node {
         data: Data {
-            name: "test".to_string(),
+            //name: "test".to_string(),
             kind: FileType::Directory,
             size: 0
         },
@@ -54,7 +68,7 @@ fn main() {
 
     files.insert(5, Node {
         data: Data {
-            name: "asd".to_string(),
+            //name: "asd".to_string(),
             kind: FileType::Directory,
             size: 0
         },

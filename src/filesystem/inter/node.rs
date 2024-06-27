@@ -8,7 +8,7 @@ pub struct Node {
 }
 
 pub struct Data {
-    pub name: String,
+    //pub name: String,
     pub kind: FileType,
     pub size: u64
 }

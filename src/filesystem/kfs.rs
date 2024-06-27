@@ -15,6 +15,7 @@ pub struct KFS {
 impl KFS {
 
     pub fn new(mut files: HashMap<u64, Node>) -> Self {
+        /*
         let mut children = BTreeMap::new();
 
         for ino in files.keys() {
@@ -25,13 +26,14 @@ impl KFS {
 
         files.insert(1, Node {
             data: Data {
-                name: ".".to_string(),
+                //name: ".".to_string(),
                 kind: FileType::Directory,
                 size: 0
             },
             children: Some(children),
             parent: 0
         });
+        */
 
         let next_ino = (files.len() as u64)+1;
 
@@ -39,17 +41,6 @@ impl KFS {
             files: Arc::new(Mutex::new(files)),
             next_ino
         }
-
-        /*
-        let ino = Self::calculate_inodes(&files)+1;
-
-        println!("INO: {}", ino);
-
-        Self {
-            files,
-            ino
-        }
-        */
     }
 }
 
@@ -156,7 +147,7 @@ impl Filesystem for KFS {
 
             files.insert(self.next_ino, Node {
                 data: Data {
-                    name: name.to_str().unwrap().to_string(),
+                    //name: name.to_str().unwrap().to_string(),
                     kind: FileType::Directory,
                     size: 0
                 },
