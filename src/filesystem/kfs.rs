@@ -58,6 +58,7 @@ impl Filesystem for KFS {
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
         let files = self.files.lock().unwrap();
         //let children = self.files.lock().as_ref().unwrap().get(&parent).unwrap().children.as_ref().unwrap().clone();
+        //let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
 
         for child_ino in files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().iter() {
             if files.get(child_ino).as_ref().unwrap().data.name == name.to_str().unwrap() {
@@ -248,10 +249,26 @@ impl Filesystem for KFS {
         //reply.error(ENOSYS);
     }
 
-    /// Remove a directory.
     fn rmdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
-        println!("RM DIR");
-        //reply.error(ENOSYS);
+        let mut files = self.files.lock().unwrap();
+        let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
+
+        for ino in children.iter() {
+            if files.get(&ino).as_ref().unwrap().data.kind == FileType::Directory &&
+                    files.get(&ino).as_ref().unwrap().data.name.as_str() == name.to_str().unwrap() {
+                let children = files.get(&ino).as_ref().unwrap().children.as_ref().unwrap().clone();
+                for child_ino in children.iter() {
+                    files.remove(child_ino);
+                }
+
+                files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(&ino);
+                files.remove(&ino);
+                reply.ok();
+                return;
+            }
+        }
+
+        reply.error(38);
     }
 
     fn rename(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, newparent: u64, newname: &OsStr, flags: u32, reply: ReplyEmpty) {
