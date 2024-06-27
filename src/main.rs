@@ -66,7 +66,8 @@ fn main() {
     let mountpoint = "/media/test";
     let mut options = [
         MountOption::RW,
-        MountOption::FSName("KFS".to_string())
+        MountOption::FSName("KFS".to_string()),
+        MountOption::Async
         //MountOption::AutoUnmount
     ];
     fuser::mount2(KFS::new(files), mountpoint, &options).unwrap();
