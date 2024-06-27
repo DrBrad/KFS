@@ -66,8 +66,8 @@ fn main() {
         parent: 4
     });
 
-    let mountpoint = "/media/test2";
-    let mut options = vec![
+    let mountpoint = "/media/test";
+    let mut options = [
         MountOption::RW,
         MountOption::FSName("KFS".to_string())
         //MountOption::AutoUnmount
