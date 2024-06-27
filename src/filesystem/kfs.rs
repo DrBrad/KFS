@@ -3,10 +3,7 @@ use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
 use fuser::{FileAttr, Filesystem, FileType, ReplyAttr, ReplyCreate, ReplyData, ReplyDirectory, ReplyEntry, ReplyOpen, ReplyStatfs, ReplyWrite, Request};
-use crate::filesystem::inter::file::File;
 use crate::filesystem::inter::node::{Data, Node};
-use crate::filesystem::kdirectory::KDirectory;
-use crate::filesystem::kfile::KFile;
 
 const TTL: Duration = Duration::from_secs(1); // 1 second
 

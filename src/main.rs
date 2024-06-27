@@ -3,11 +3,8 @@ pub mod filesystem;
 use std::collections::{HashMap, HashSet};
 use std::time::UNIX_EPOCH;
 use filesystem::kfs::KFS;
-use fuser::{FileAttr, FileType, MountOption};
-use crate::filesystem::inter::file::File;
+use fuser::{FileType, MountOption};
 use crate::filesystem::inter::node::{Data, Node};
-use crate::filesystem::kdirectory::KDirectory;
-use crate::filesystem::kfile::KFile;
 
 fn main() {
     /*
