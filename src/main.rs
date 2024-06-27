@@ -1,6 +1,6 @@
 pub mod filesystem;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::time::UNIX_EPOCH;
 use filesystem::kfs::KFS;
 use fuser::{FileType, MountOption};
@@ -39,8 +39,8 @@ fn main() {
     });
 
 
-    let mut children = HashSet::new();
-    children.insert(5 as u64);
+    let mut children = BTreeMap::new();
+    children.insert("asd".to_string(), 5 as u64);
 
     files.insert(4, Node {
         data: Data {
@@ -59,7 +59,7 @@ fn main() {
             kind: FileType::Directory,
             size: 0
         },
-        children: Some(HashSet::new()),
+        children: Some(BTreeMap::new()),
         parent: 4
     });
 

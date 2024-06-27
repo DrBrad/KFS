@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, UNIX_EPOCH};
@@ -15,11 +15,11 @@ pub struct KFS {
 impl KFS {
 
     pub fn new(mut files: HashMap<u64, Node>) -> Self {
-        let mut children = HashSet::new();
+        let mut children = BTreeMap::new();
 
         for ino in files.keys() {
             if files.get(ino).unwrap().parent == 1 {
-                children.insert(ino.clone());
+                children.insert(files.get(ino).as_ref().unwrap().data.name.clone(), ino.clone());
             }
         }
 
@@ -60,34 +60,33 @@ impl Filesystem for KFS {
         //let children = self.files.lock().as_ref().unwrap().get(&parent).unwrap().children.as_ref().unwrap().clone();
         //let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
 
-        for child_ino in files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().iter() {
-            if files.get(child_ino).as_ref().unwrap().data.name == name.to_str().unwrap() {
-                reply.entry(&TTL, &FileAttr {
-                    ino: *child_ino,
-                    size: files.get(child_ino).as_ref().unwrap().data.size,
-                    blocks: 1,
-                    atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-                    mtime: UNIX_EPOCH,
-                    ctime: UNIX_EPOCH,
-                    crtime: UNIX_EPOCH,
-                    kind: files.get(child_ino).as_ref().unwrap().data.kind,
-                    perm: 0o777,
-                    nlink: 1,
-                    uid: 501,
-                    gid: 20,
-                    rdev: 0,
-                    flags: 0,
-                    blksize: 512
-                }, 0);
-                return;
-            }
+        if let Some(ino) = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()) {
+            reply.entry(&TTL, &FileAttr {
+                ino: *ino,
+                size: files.get(ino).as_ref().unwrap().data.size,
+                blocks: 1,
+                atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+                mtime: UNIX_EPOCH,
+                ctime: UNIX_EPOCH,
+                crtime: UNIX_EPOCH,
+                kind: files.get(ino).as_ref().unwrap().data.kind,
+                perm: 0o777,
+                nlink: 1,
+                uid: 501,
+                gid: 20,
+                rdev: 0,
+                flags: 0,
+                blksize: 512
+            }, 0);
+            return;
         }
+
 
         reply.error(2); // Return error for unknown parent directory
     }
 
     fn getattr(&mut self, _req: &Request<'_>, ino: u64, reply: ReplyAttr) {
-        if let child_node = self.files.lock().as_ref().unwrap().get(&ino).unwrap() {
+        if let Some(child_node) = self.files.lock().as_ref().unwrap().get(&ino) {
             reply.attr(&TTL, &FileAttr {
                 ino,
                 size: child_node.data.size,
@@ -135,10 +134,11 @@ impl Filesystem for KFS {
         }
 
         let children = files.get(&ino).unwrap().children.as_ref().unwrap().clone();
+
         let mut i = offset;
-        for child_ino in children.iter().skip(i as usize) {
+        for (child_name, child_ino) in children.iter().skip(i as usize) {
             if let child_node = files.get(child_ino).unwrap() {
-                reply.add(*child_ino, i+2, child_node.data.kind, child_node.data.name.as_str());
+                reply.add(*child_ino, i+2, child_node.data.kind, child_name);
                 i += 1;
             }
         }
@@ -148,46 +148,45 @@ impl Filesystem for KFS {
 
     fn mkdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, reply: ReplyEntry) {
         let mut files = self.files.lock().unwrap();
-        for child_ino in files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().iter() {
-            if files.get(&child_ino).as_ref().unwrap().data.kind == FileType::Directory &&
-                    files.get(&child_ino).as_ref().unwrap().data.name.as_str() == name.to_str().unwrap() {
-                reply.error(17);
-                return;
-            }
+
+        if !files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().contains_key(name.to_str().unwrap()) {
+            let ino = self.next_ino;
+
+            files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().insert(name.to_str().unwrap().to_string(), ino);
+
+            files.insert(self.next_ino, Node {
+                data: Data {
+                    name: name.to_str().unwrap().to_string(),
+                    kind: FileType::Directory,
+                    size: 0
+                },
+                children: Some(BTreeMap::new()),
+                parent: parent
+            });
+            self.next_ino += 1;
+
+            reply.entry(&TTL, &FileAttr {
+                ino,
+                size: 0,
+                blocks: 1,
+                atime: UNIX_EPOCH, // 1970-01-01 00:00:00
+                mtime: UNIX_EPOCH,
+                ctime: UNIX_EPOCH,
+                crtime: UNIX_EPOCH,
+                kind: FileType::Directory,
+                perm: 0o777,
+                nlink: 1,
+                uid: 501,
+                gid: 20,
+                rdev: 0,
+                flags: 0,
+                blksize: 512
+            }, 0);
+
+            return;
         }
 
-        let ino = self.next_ino;
-
-        files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().insert(ino);
-
-        files.insert(self.next_ino, Node {
-            data: Data {
-                name: name.to_str().unwrap().to_string(),
-                kind: FileType::Directory,
-                size: 0
-            },
-            children: Some(HashSet::new()),
-            parent: parent
-        });
-        self.next_ino += 1;
-
-        reply.entry(&TTL, &FileAttr {
-            ino,
-            size: 0,
-            blocks: 1,
-            atime: UNIX_EPOCH, // 1970-01-01 00:00:00
-            mtime: UNIX_EPOCH,
-            ctime: UNIX_EPOCH,
-            crtime: UNIX_EPOCH,
-            kind: FileType::Directory,
-            perm: 0o777,
-            nlink: 1,
-            uid: 501,
-            gid: 20,
-            rdev: 0,
-            flags: 0,
-            blksize: 512
-        }, 0);
+        reply.error(17);
     }
 
 
@@ -246,40 +245,32 @@ impl Filesystem for KFS {
 
     fn unlink(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         let mut files = self.files.lock().unwrap();
-        let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
 
-        for ino in children.iter() {
-            if files.get(&ino).as_ref().unwrap().data.name.as_str() == name.to_str().unwrap() {
-                files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(&ino);
-                files.remove(&ino);
-                reply.ok();
-                return;
-            }
-        }
+        let ino = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()).unwrap().clone();
+        files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(name.to_str().unwrap());
+        files.remove(&ino);
+        reply.ok();
 
-        reply.error(38);
+        //reply.error(38);
     }
 
     fn rmdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         let mut files = self.files.lock().unwrap();
-        let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
+        //let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
 
-        for ino in children.iter() {
-            if files.get(&ino).as_ref().unwrap().data.kind == FileType::Directory &&
-                    files.get(&ino).as_ref().unwrap().data.name.as_str() == name.to_str().unwrap() {
-                let children = files.get(&ino).as_ref().unwrap().children.as_ref().unwrap().clone();
-                for child_ino in children.iter() {
-                    files.remove(child_ino);
-                }
+        let ino = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()).unwrap().clone();
 
-                files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(&ino);
-                files.remove(&ino);
-                reply.ok();
-                return;
-            }
+        let children = files.get(&ino).as_ref().unwrap().children.as_ref().unwrap().clone();
+        for (child_name, child_ino) in children.iter() {
+            files.remove(child_ino);
         }
 
-        reply.error(38);
+        files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(name.to_str().unwrap());
+        files.remove(&ino);
+        reply.ok();
+        //return;
+
+        //reply.error(38);
     }
 
     fn rename(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, newparent: u64, newname: &OsStr, flags: u32, reply: ReplyEmpty) {
