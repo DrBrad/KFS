@@ -35,7 +35,7 @@ fn main() {
         data: Data {
             //name: "hello_world.txt".to_string(),
             kind: FileType::RegularFile,
-            size: 3
+            size: 11
         },
         children: None,
         parent: 1
@@ -45,7 +45,7 @@ fn main() {
         data: Data {
             //name: "new.txt".to_string(),
             kind: FileType::RegularFile,
-            size: 3
+            size: 11
         },
         children: None,
         parent: 1

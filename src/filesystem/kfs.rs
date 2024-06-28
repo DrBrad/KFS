@@ -115,7 +115,9 @@ impl Filesystem for KFS {
         }
         */
 
-        reply.error(2);
+        reply.data(&"Hello World".as_bytes()[offset as usize..]);
+
+        //reply.error(2);
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
