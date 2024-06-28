@@ -225,7 +225,6 @@ impl Filesystem for KFS {
     }
 
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
-        println!("WRITE FILE");
         /*
         let mut files = self.files.lock().unwrap();
 
@@ -244,6 +243,23 @@ impl Filesystem for KFS {
             reply.error(ENOENT);
         }
         */
+
+        let mut files = self.files.lock().unwrap();
+
+        if !files.contains_key(&ino) {
+            reply.error(38);
+            return;
+        }
+
+        //let end_offset = offset as usize + data.len();
+        //if (node.data.size as usize) < end_offset {
+        //    node.data.resize(end_offset, 0);
+        //}
+
+        //node.data[offset as usize..end_offset].copy_from_slice(data);
+        files.get_mut(&ino).unwrap().data.size = data.len() as u64;
+        reply.written(data.len() as u32);
+
     }
 
 
