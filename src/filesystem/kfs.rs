@@ -142,10 +142,9 @@ impl Filesystem for KFS {
 
         if !files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().contains_key(name.to_str().unwrap()) {
             let ino = self.next_ino;
+            self.next_ino += 1;
 
-            files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().insert(name.to_str().unwrap().to_string(), ino);
-
-            files.insert(self.next_ino, Node {
+            files.insert(ino, Node {
                 data: Data {
                     //name: name.to_str().unwrap().to_string(),
                     kind: FileType::Directory,
@@ -154,7 +153,8 @@ impl Filesystem for KFS {
                 children: Some(BTreeMap::new()),
                 parent: parent
             });
-            self.next_ino += 1;
+
+            files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().insert(name.to_str().unwrap().to_string(), ino);
 
             reply.entry(&TTL, &FileAttr {
                 ino,
@@ -183,14 +183,30 @@ impl Filesystem for KFS {
 
 
     fn create(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
-        println!("CREATE FILE");
+        let mut files = self.files.lock().unwrap();
 
-        /*
-        self.files.push(Box::new(KFile::new(name.to_str().unwrap(), 0)));
-        self.ino += 1;
+        if files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().contains_key(name.to_str().unwrap()) {
+            reply.error(38);
+            return;
+        }
+
+        let ino = self.next_ino;
+        self.next_ino += 1;
+
+        files.insert(ino, Node {
+            data: Data {
+                //name: name.to_str().unwrap().to_string(),
+                kind: FileType::RegularFile,
+                size: 0
+            },
+            children: None,
+            parent: parent
+        });
+
+        files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().insert(name.to_str().unwrap().to_string(), ino);
 
         reply.created(&TTL, &FileAttr {
-            ino: self.ino,
+            ino,
             size: 0,
             blocks: 1,
             atime: UNIX_EPOCH, // 1970-01-01 00:00:00
@@ -205,8 +221,7 @@ impl Filesystem for KFS {
             rdev: 0,
             flags: 0,
             blksize: 512
-        }, 0, self.ino, 0);
-        */
+        }, 0, ino, 0);
     }
 
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
