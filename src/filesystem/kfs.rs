@@ -99,10 +99,12 @@ impl Filesystem for KFS {
     }
 
     fn read(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, _size: u32, _flags: i32, _lock: Option<u64>, reply: ReplyData) {
+        /*
         if ino == 1 {
             reply.error(2);
             return;
         }
+        */
 
         /*
         match self.files.get((ino as usize)-2).unwrap().get_type() {
