@@ -183,9 +183,9 @@ impl Filesystem for KFS {
 
 
     fn create(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
-        /*
         println!("CREATE FILE");
 
+        /*
         self.files.push(Box::new(KFile::new(name.to_str().unwrap(), 0)));
         self.ino += 1;
 
