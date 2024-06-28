@@ -15,26 +15,6 @@ pub struct KFS {
 impl KFS {
 
     pub fn new(mut files: HashMap<u64, Node>) -> Self {
-        /*
-        let mut children = BTreeMap::new();
-
-        for ino in files.keys() {
-            if files.get(ino).unwrap().parent == 1 {
-                children.insert(files.get(ino).as_ref().unwrap().data.name.clone(), ino.clone());
-            }
-        }
-
-        files.insert(1, Node {
-            data: Data {
-                //name: ".".to_string(),
-                kind: FileType::Directory,
-                size: 0
-            },
-            children: Some(children),
-            parent: 0
-        });
-        */
-
         let next_ino = (files.len() as u64)+1;
 
         Self {
@@ -48,8 +28,6 @@ impl Filesystem for KFS {
 
     fn lookup(&mut self, _req: &Request, parent: u64, name: &OsStr, reply: ReplyEntry) {
         let files = self.files.lock().unwrap();
-        //let children = self.files.lock().as_ref().unwrap().get(&parent).unwrap().children.as_ref().unwrap().clone();
-        //let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
 
         if let Some(ino) = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()) {
             reply.entry(&TTL, &FileAttr {
@@ -72,8 +50,7 @@ impl Filesystem for KFS {
             return;
         }
 
-
-        reply.error(2); // Return error for unknown parent directory
+        reply.error(2);
     }
 
     fn getattr(&mut self, _req: &Request<'_>, ino: u64, reply: ReplyAttr) {
@@ -99,25 +76,23 @@ impl Filesystem for KFS {
     }
 
     fn read(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, _size: u32, _flags: i32, _lock: Option<u64>, reply: ReplyData) {
-        /*
-        if ino == 1 {
-            reply.error(2);
+        let files = self.files.lock().unwrap();
+
+        if let Some(node) = files.get(&ino) {
+            let data_len = node.data.content.as_ref().unwrap().len() as u64;
+
+            if (offset as u64) < data_len {
+                let end_offset = ((offset as usize) + (_size as usize)).min(data_len as usize);
+                reply.data(&node.data.content.as_ref().unwrap()[offset as usize..end_offset]);
+
+                return;
+            }
+
+            reply.data(&[]);
             return;
         }
-        */
 
-        /*
-        match self.files.get((ino as usize)-2).unwrap().get_type() {
-            FileType::RegularFile => {
-                reply.data(&"HELLO WORLD".as_bytes()[offset as usize..]);
-            },
-            _ => reply.error(2)
-        }
-        */
-
-        reply.data(&"Hello World".as_bytes()[offset as usize..]);
-
-        //reply.error(2);
+        reply.error(2);
     }
 
     fn readdir(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, mut reply: ReplyDirectory) {
@@ -151,6 +126,7 @@ impl Filesystem for KFS {
             files.insert(ino, Node {
                 data: Data {
                     //name: name.to_str().unwrap().to_string(),
+                    content: None,
                     kind: FileType::Directory,
                     size: 0
                 },
@@ -184,8 +160,6 @@ impl Filesystem for KFS {
         reply.error(17);
     }
 
-
-
     fn create(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, mode: u32, umask: u32, flags: i32, reply: ReplyCreate) {
         let mut files = self.files.lock().unwrap();
 
@@ -199,7 +173,7 @@ impl Filesystem for KFS {
 
         files.insert(ino, Node {
             data: Data {
-                //name: name.to_str().unwrap().to_string(),
+                content: Some(Vec::new()),
                 kind: FileType::RegularFile,
                 size: 0
             },
@@ -229,60 +203,44 @@ impl Filesystem for KFS {
     }
 
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
-        /*
         let mut files = self.files.lock().unwrap();
 
-        if let Some(file_data) = files.get_mut(&ino) {
-            let offset = offset as usize;
-            if offset + data.len() > file_data.data.len() {
-                file_data.data.resize(offset + data.len(), 0);
+        if let Some(node) = files.get_mut(&ino) {
+            let end_offset = offset as usize + data.len();
+            if node.data.content.as_ref().unwrap().len() < end_offset {
+                node.data.content.as_mut().unwrap().resize(end_offset, 0);
             }
-            file_data.data[offset..offset + data.len()].copy_from_slice(data);
-            file_data.attr.size = file_data.data.len() as u64;
-            file_data.attr.mtime = SystemTime::now();
-            file_data.attr.ctime = SystemTime::now();
+            node.data.content.as_mut().unwrap()[offset as usize..end_offset].copy_from_slice(data);
 
+            node.data.size = (offset as u64) + (data.len() as u64);
             reply.written(data.len() as u32);
-        } else {
-            reply.error(ENOENT);
-        }
-        */
-
-        let mut files = self.files.lock().unwrap();
-
-        if !files.contains_key(&ino) {
-            reply.error(38);
             return;
         }
 
-        //let end_offset = offset as usize + data.len();
-        //if (node.data.size as usize) < end_offset {
-        //    node.data.resize(end_offset, 0);
-        //}
-
-        //node.data[offset as usize..end_offset].copy_from_slice(data);
-        files.get_mut(&ino).unwrap().data.size = data.len() as u64;
-        reply.written(data.len() as u32);
-
+        reply.error(38);
     }
-
-
-
 
     fn unlink(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         let mut files = self.files.lock().unwrap();
+
+        if !files.contains_key(&parent) {
+            reply.error(38);
+            return;
+        }
 
         let ino = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()).unwrap().clone();
         files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(name.to_str().unwrap());
         files.remove(&ino);
         reply.ok();
-
-        //reply.error(38);
     }
 
     fn rmdir(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, reply: ReplyEmpty) {
         let mut files = self.files.lock().unwrap();
-        //let children = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().clone();
+
+        if !files.contains_key(&parent) {
+            reply.error(38);
+            return;
+        }
 
         let ino = files.get(&parent).as_ref().unwrap().children.as_ref().unwrap().get(name.to_str().unwrap()).unwrap().clone();
 
@@ -294,8 +252,6 @@ impl Filesystem for KFS {
         files.get_mut(&parent).as_mut().unwrap().children.as_mut().unwrap().remove(name.to_str().unwrap());
         files.remove(&ino);
         reply.ok();
-
-        //reply.error(38);
     }
 
     fn rename(&mut self, _req: &Request<'_>, parent: u64, name: &OsStr, newparent: u64, newname: &OsStr, flags: u32, reply: ReplyEmpty) {
@@ -308,55 +264,6 @@ impl Filesystem for KFS {
 
         reply.ok();
     }
-
-
-    /*
-    fn write(
-        &mut self,
-        _req: &Request,
-        inode: u64,
-        fh: u64,
-        offset: i64,
-        data: &[u8],
-        _write_flags: u32,
-        #[allow(unused_variables)] flags: i32,
-        _lock_owner: Option<u64>,
-        reply: ReplyWrite,
-    ) {
-        //EACCES: ::c_int = 13;
-        //EBADF: ::c_int = 9;
-        //reply.error(libc::EACCES);
-        reply.error(9);
-    }
-
-    fn write_directory_content(&self, inode: Inode, entries: DirectoryDescriptor) {
-        let path = Path::new(&self.data_dir)
-            .join("contents")
-            .join(inode.to_string());
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)
-            .unwrap();
-        bincode::serialize_into(file, &entries).unwrap();
-    }
-    */
-
-    /*
-    fn write_inode(&self, inode: &InodeAttributes) {
-        let path = Path::new(&self.data_dir)
-            .join("inodes")
-            .join(inode.inode.to_string());
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(true)
-            .open(path)
-            .unwrap();
-        bincode::serialize_into(file, inode).unwrap();
-    }
-    */
 
     fn statfs(&mut self, _req: &Request, _ino: u64, reply: ReplyStatfs) {
         // Example values for total blocks, free blocks, available blocks, etc.
