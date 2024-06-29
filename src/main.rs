@@ -1,4 +1,5 @@
 pub mod filesystem;
+pub mod daemon;
 
 use std::collections::{BTreeMap, HashMap};
 use filesystem::kfs::KFS;
@@ -24,7 +25,7 @@ fn main() {
     files.insert(1, Node {
         data: Data {
             //name: ".".to_string(),
-            content: None,
+            //content: None,
             kind: FileType::Directory,
             size: 0
         },
@@ -35,7 +36,6 @@ fn main() {
     files.insert(2, Node {
         data: Data {
             //name: "hello_world.txt".to_string(),
-            content: Some("Hello World".as_bytes().to_vec()),
             kind: FileType::RegularFile,
             size: 11
         },
@@ -46,7 +46,6 @@ fn main() {
     files.insert(3, Node {
         data: Data {
             //name: "new.txt".to_string(),
-            content: Some("NEW".as_bytes().to_vec()),
             kind: FileType::RegularFile,
             size: 3
         },
@@ -61,7 +60,6 @@ fn main() {
     files.insert(4, Node {
         data: Data {
             //name: "test".to_string(),
-            content: None,
             kind: FileType::Directory,
             size: 0
         },
@@ -73,7 +71,7 @@ fn main() {
     files.insert(5, Node {
         data: Data {
             //name: "asd".to_string(),
-            content: None,
+            //content: None,
             kind: FileType::Directory,
             size: 0
         },

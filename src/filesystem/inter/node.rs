@@ -9,7 +9,7 @@ pub struct Node {
 
 pub struct Data {
     //pub name: String,
-    pub content: Option<Vec<u8>>,
+    //pub content: Option<Vec<u8>>,
     pub kind: FileType,
     pub size: u64
 }

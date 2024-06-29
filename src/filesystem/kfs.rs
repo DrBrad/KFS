@@ -78,6 +78,7 @@ impl Filesystem for KFS {
     fn read(&mut self, _req: &Request, ino: u64, _fh: u64, offset: i64, _size: u32, _flags: i32, _lock: Option<u64>, reply: ReplyData) {
         let files = self.files.lock().unwrap();
 
+        /*
         if let Some(node) = files.get(&ino) {
             let data_len = node.data.content.as_ref().unwrap().len() as u64;
 
@@ -91,6 +92,7 @@ impl Filesystem for KFS {
             reply.data(&[]);
             return;
         }
+        */
 
         reply.error(2);
     }
@@ -126,7 +128,7 @@ impl Filesystem for KFS {
             files.insert(ino, Node {
                 data: Data {
                     //name: name.to_str().unwrap().to_string(),
-                    content: None,
+                    //content: None,
                     kind: FileType::Directory,
                     size: 0
                 },
@@ -173,7 +175,7 @@ impl Filesystem for KFS {
 
         files.insert(ino, Node {
             data: Data {
-                content: Some(Vec::new()),
+                //content: Some(Vec::new()),
                 kind: FileType::RegularFile,
                 size: 0
             },
@@ -205,6 +207,7 @@ impl Filesystem for KFS {
     fn write(&mut self, _req: &Request<'_>, ino: u64, fh: u64, offset: i64, data: &[u8], write_flags: u32, flags: i32, lock_owner: Option<u64>, reply: ReplyWrite) {
         let mut files = self.files.lock().unwrap();
 
+        /*
         if let Some(node) = files.get_mut(&ino) {
             let end_offset = offset as usize + data.len();
             if node.data.content.as_ref().unwrap().len() < end_offset {
@@ -216,6 +219,7 @@ impl Filesystem for KFS {
             reply.written(data.len() as u32);
             return;
         }
+        */
 
         reply.error(38);
     }
