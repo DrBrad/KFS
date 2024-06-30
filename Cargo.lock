@@ -7,8 +7,13 @@ name = "KFS"
 version = "0.1.0"
 dependencies = [
  "fuser",
+ "kad4",
  "libc",
 ]
+
+[[package]]
+name = "bencode"
+version = "0.1.0"
 
 [[package]]
 name = "byteorder"
@@ -29,6 +34,13 @@ dependencies = [
  "pkg-config",
  "smallvec",
  "zerocopy",
+]
+
+[[package]]
+name = "kad4"
+version = "0.1.0"
+dependencies = [
+ "bencode",
 ]
 
 [[package]]

@@ -1,12 +1,42 @@
+extern crate kad4;
 pub mod filesystem;
 pub mod daemon;
+mod kad;
 
 use std::collections::{BTreeMap, HashMap};
+use std::thread::sleep;
+use std::time::Duration;
 use filesystem::kfs::KFS;
 use fuser::{FileType, MountOption};
+use kad4::kad::kademlia_base::KademliaBase;
 use crate::filesystem::inter::node::{Data, Node};
+use crate::kad::kademlia::Kademlia;
 
 fn main() {
+    let kad = Kademlia::new();//::try_from("Kademlia").unwrap();
+    kad.get_routing_table().lock().unwrap().set_secure_only(false);
+    kad.get_server().lock().unwrap().set_allow_bogon(true);
+
+    kad.bind(6435);
+
+
+    loop {
+        sleep(Duration::from_secs(10));
+        let routing_table = kad.get_routing_table().lock().unwrap();
+        println!("CONSENSUS: {}  {}  {}",
+                 routing_table.get_derived_uid().to_string(),
+                 routing_table.get_consensus_external_address().to_string(),
+                 routing_table.all_nodes().len());
+    }
+
+
+
+
+
+
+
+
+
     /*
     let mut files: Vec<Box<dyn File>> = Vec::new();
     files.push(Box::new(KFile::new("hello_world.txt", 100)));
@@ -82,6 +112,23 @@ fn main() {
     });
     */
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
     let mountpoint = "/media/test";
     let mut options = [
         MountOption::RW,
@@ -90,4 +137,5 @@ fn main() {
         //MountOption::AutoUnmount
     ];
     fuser::mount2(KFS::default(), mountpoint, &options).unwrap();
+    */
 }

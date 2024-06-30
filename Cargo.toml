@@ -7,5 +7,6 @@ edition = "2021"
 #sudo apt-get install fuse libfuse-dev
 
 [dependencies]
+kad4 = { path = "/home/brad/CLionProjects/rKad4" }
 fuser = "0.14.0"
 libc = "0.2.155"
