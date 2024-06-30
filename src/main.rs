@@ -13,7 +13,7 @@ use crate::filesystem::inter::node::{Data, Node};
 use crate::kad::kademlia::Kademlia;
 
 fn main() {
-    let kad = Kademlia::new();//::try_from("Kademlia").unwrap();
+    let kad = Kademlia::default();//::try_from("Kademlia").unwrap();
     kad.get_routing_table().lock().unwrap().set_secure_only(false);
     kad.get_server().lock().unwrap().set_allow_bogon(true);
 
