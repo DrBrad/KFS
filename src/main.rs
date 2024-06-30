@@ -30,6 +30,17 @@ fn main() {
     }
 
 
+    /*
+    message types
+    FILE_CHANGE {
+        meta: {
+            name: "blank.txt",
+            type: 0, //ENUM OF FILE TYPES
+            size: 0
+        },
+        action: REMOVE //ENUM TYPE OF ACTION
+    }
+    */
 
 
 
