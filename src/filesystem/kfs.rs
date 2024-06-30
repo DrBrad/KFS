@@ -15,12 +15,28 @@ pub struct KFS {
 impl KFS {
 
     pub fn new(mut files: HashMap<u64, Node>) -> Self {
+        files.insert(1, Node {
+            data: Data {
+                //content: None,
+                kind: FileType::Directory,
+                size: 0
+            },
+            children: Some(BTreeMap::new()),
+            parent: 0
+        });
+
         let next_ino = (files.len() as u64)+1;
 
         Self {
             files: Arc::new(Mutex::new(files)),
             next_ino
         }
+    }
+}
+
+impl Default for KFS {
+    fn default() -> Self {
+        Self::new(HashMap::new())
     }
 }
 
@@ -276,7 +292,7 @@ impl Filesystem for KFS {
             500000,  // free blocks
             500000,  // available blocks
             1000000, // total inodes
-            999995,  // free inodes
+            999999-self.next_ino,  // free inodes
             512,     // block size
             255,     // maximum name length
             0       // filesystem ID

@@ -15,6 +15,8 @@ fn main() {
     dir.add_file(Box::new(KFile::new("new.txt", 100)));
     files.push(Box::new(dir));
     */
+
+    /*
     let mut files = HashMap::new();
 
     let mut children = BTreeMap::new();
@@ -78,6 +80,7 @@ fn main() {
         children: Some(BTreeMap::new()),
         parent: 4
     });
+    */
 
     let mountpoint = "/media/test";
     let mut options = [
@@ -86,5 +89,5 @@ fn main() {
         MountOption::Async
         //MountOption::AutoUnmount
     ];
-    fuser::mount2(KFS::new(files), mountpoint, &options).unwrap();
+    fuser::mount2(KFS::default(), mountpoint, &options).unwrap();
 }
