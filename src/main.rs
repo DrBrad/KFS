@@ -32,6 +32,7 @@ fn main() {
 
     /*
     message types
+    JOIN_MESSAGE
     SYNC
     FILE_CHANGE
 
