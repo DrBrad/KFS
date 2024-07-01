@@ -32,11 +32,13 @@ fn main() {
 
     /*
     message types
-    JOIN_MESSAGE
-    SYNC
-    FILE_CHANGE
+    JOIN_NETWORK
 
-    DECIDE WEATHER OR NOT TO SWITCH TO CHORD OR KEEP KADEMLIA FOR THIS
+    socket2
+    LIST_FILES = BASED OFF OF FOLDER HASH
+    FILE_CHANGE
+    READ
+    WRITE
 
     */
 
