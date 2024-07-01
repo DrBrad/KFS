@@ -1,16 +1,18 @@
 extern crate kad4;
 pub mod filesystem;
 pub mod daemon;
-mod kad;
+pub mod dht;
+pub mod socket;
 
 use std::collections::{BTreeMap, HashMap};
+use std::net::{IpAddr, SocketAddr};
 use std::thread::sleep;
 use std::time::Duration;
 use filesystem::kfs::KFS;
 use fuser::{FileType, MountOption};
 use kad4::kad::kademlia_base::KademliaBase;
 use crate::filesystem::inter::node::{Data, Node};
-use crate::kad::kademlia::Kademlia;
+use crate::dht::kademlia::Kademlia;
 
 fn main() {
     let kad = Kademlia::default();//::try_from("Kademlia").unwrap();
