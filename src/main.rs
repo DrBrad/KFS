@@ -17,7 +17,7 @@ use fuser::{FileType, MountOption};
 use kad4::kad::kademlia_base::KademliaBase;
 use crate::filesystem::inter::node::{Data, Node};
 use crate::dht::kademlia::Kademlia;
-use crate::socket::utp::UTP;
+use crate::socket::utp_socket::{UtpSocket};
 
 //echo -n "hello" >/dev/udp/localhost/8080
 
@@ -25,9 +25,8 @@ fn main() {
 
     //self.running.store(true, Ordering::Relaxed);
 
-
-    let mut utp = UTP::new();
-    utp.start(7070);
+    let mut utp_socket = UtpSocket::bind(SocketAddr::from((Ipv4Addr::UNSPECIFIED, 7070))).expect("Failed to bind.");
+    utp_socket.send_to(&SocketAddr::from((Ipv4Addr::UNSPECIFIED, 7071)), "asdasd".as_bytes());
 
     loop {
 

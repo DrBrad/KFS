@@ -1,22 +1,65 @@
+use std::io::Error;
 use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
 use std::sync::Arc;
 use std::sync::mpsc::{channel, TryRecvError};
 use std::thread;
+use crate::socket::utp_packet::UtpPacket;
 
 //https://www.bittorrent.org/beps/bep_0029.html
 //We will be using UTP for speed and multi connectivity (won't require port forwarding)
 
-pub struct UTP {
-    server: Option<Arc<UdpSocket>>
+pub struct UtpSocket {
+    socket: UdpSocket,
+    conn_id: u16,
+    seq_nr: u16,
+    ack_nr: u16,
 }
 
-impl UTP {
+impl UtpSocket {
 
-    pub fn new() -> Self {
-        Self {
-            server: None
-        }
+    pub fn bind(addr: SocketAddr) -> Result<Self, Error> {
+        let socket = UdpSocket::bind(addr)?;
+        Ok(Self {
+            socket,
+            conn_id: 0,//rand::random(),
+            seq_nr: 1,
+            ack_nr: 0,
+        })
     }
+
+    pub fn send_to(&mut self, dest: &SocketAddr, data: &[u8]) {
+        let packet = UtpPacket::new(data.to_vec(), self.conn_id, self.seq_nr, self.ack_nr);
+        let bytes = packet.to_bytes();
+        self.socket.send_to(&bytes, dest).expect("Failed to send packet");
+        self.seq_nr += 1;
+    }
+
+    pub fn send_with_retransmission(&mut self, dest: &SocketAddr, data: &[u8]) {
+        let mut retries = 0;
+        let max_retries = 5;
+        while retries < max_retries {
+            self.send_to(dest, data);
+            let (ack_packet, _) = self.receive();
+            if ack_packet.header.ack_nr == self.seq_nr - 1 {
+                return;
+            }
+            retries += 1;
+        }
+        eprintln!("Failed to send packet after {} retries", max_retries);
+    }
+
+    pub fn receive(&mut self) -> (UtpPacket, SocketAddr) {
+        let mut buf = [0u8; 1500];
+        let (amt, src) = self.socket.recv_from(&mut buf).expect("Failed to receive packet");
+        let packet = UtpPacket::from_bytes(&buf[..amt]);
+        self.ack_nr = packet.header.seq_nr;
+        (packet, src)
+    }
+}
+
+
+/*
+    server: Option<Arc<UdpSocket>>
 
     pub fn start(&mut self, port: u16) {
         self.server = Some(Arc::new(UdpSocket::bind(SocketAddr::from((Ipv4Addr::UNSPECIFIED, port))).expect("Failed to bind socket")));
@@ -63,4 +106,4 @@ impl UTP {
             }
         });
     }
-}
+*/
