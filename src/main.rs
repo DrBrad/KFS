@@ -5,7 +5,11 @@ pub mod dht;
 pub mod socket;
 
 use std::collections::{BTreeMap, HashMap};
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
+use std::sync::mpsc::{channel, TryRecvError};
+use std::thread;
 use std::thread::sleep;
 use std::time::Duration;
 use filesystem::kfs::KFS;
@@ -13,8 +17,23 @@ use fuser::{FileType, MountOption};
 use kad4::kad::kademlia_base::KademliaBase;
 use crate::filesystem::inter::node::{Data, Node};
 use crate::dht::kademlia::Kademlia;
+use crate::socket::utp::UTP;
+
+//echo -n "hello" >/dev/udp/localhost/8080
 
 fn main() {
+
+    //self.running.store(true, Ordering::Relaxed);
+
+
+    let mut utp = UTP::new();
+    utp.start(7070);
+
+    loop {
+
+    }
+
+    /*
     let kad = Kademlia::default();//::try_from("Kademlia").unwrap();
     kad.get_routing_table().lock().unwrap().set_secure_only(false);
     kad.get_server().lock().unwrap().set_allow_bogon(true);
@@ -30,6 +49,7 @@ fn main() {
                  routing_table.get_consensus_external_address().to_string(),
                  routing_table.all_nodes().len());
     }
+    */
 
 
     /*
