@@ -3,6 +3,9 @@ use std::sync::Arc;
 use std::sync::mpsc::{channel, TryRecvError};
 use std::thread;
 
+//https://www.bittorrent.org/beps/bep_0029.html
+//We will be using UTP for speed and multi connectivity (won't require port forwarding)
+
 pub struct UTP {
     server: Option<Arc<UdpSocket>>
 }
