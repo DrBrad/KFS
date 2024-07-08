@@ -1,10 +1,10 @@
 use crate::socket::inter::socket::Socket;
 
-pub struct TcpSocket {
+pub struct UdpSocket {
 
 }
 
-impl Socket for TcpSocket {
+impl Socket for UdpSocket {
 
     fn connect(&self) {
         todo!()

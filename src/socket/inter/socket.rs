@@ -26,6 +26,8 @@
 
 pub trait Socket {
 
+    fn connect(&self);
+
     fn handshake(&self);
 
     fn get_list(&self);
