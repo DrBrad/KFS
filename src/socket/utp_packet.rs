@@ -1,3 +1,5 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
 const HEADER_SIZE: usize = 20; // Basic header size without extensions
 
 // Define the uTP packet header
@@ -18,4 +20,56 @@ pub struct UtpHeader {
 pub struct UtpPacket {
     pub(crate) header: UtpHeader,
     pub(crate) payload: Vec<u8>,
+}
+
+
+impl UtpPacket {
+    pub fn new(payload: Vec<u8>, conn_id: u16, seq_nr: u16, ack_nr: u16) -> Self {
+        UtpPacket {
+            header: UtpHeader {
+                type_version: 1, // Set appropriate type and version
+                extension: 0,
+                connection_id: conn_id,
+                timestamp: current_timestamp(),
+                timestamp_diff: 0,
+                wnd_size: 0,
+                seq_nr,
+                ack_nr,
+            },
+            payload,
+        }
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = vec![0u8; HEADER_SIZE + self.payload.len()];
+        bytes[0] = self.header.type_version;
+        bytes[1] = self.header.extension;
+        bytes[2..4].copy_from_slice(&self.header.connection_id.to_be_bytes());
+        bytes[4..8].copy_from_slice(&self.header.timestamp.to_be_bytes());
+        bytes[8..12].copy_from_slice(&self.header.timestamp_diff.to_be_bytes());
+        bytes[12..16].copy_from_slice(&self.header.wnd_size.to_be_bytes());
+        bytes[16..18].copy_from_slice(&self.header.seq_nr.to_be_bytes());
+        bytes[18..20].copy_from_slice(&self.header.ack_nr.to_be_bytes());
+        bytes[HEADER_SIZE..].copy_from_slice(&self.payload);
+        bytes
+    }
+
+    pub fn from_bytes(bytes: &[u8]) -> Self {
+        let header = UtpHeader {
+            type_version: bytes[0],
+            extension: bytes[1],
+            connection_id: u16::from_be_bytes([bytes[2], bytes[3]]),
+            timestamp: u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]),
+            timestamp_diff: u32::from_be_bytes([bytes[8], bytes[9], bytes[10], bytes[11]]),
+            wnd_size: u32::from_be_bytes([bytes[12], bytes[13], bytes[14], bytes[15]]),
+            seq_nr: u16::from_be_bytes([bytes[16], bytes[17]]),
+            ack_nr: u16::from_be_bytes([bytes[18], bytes[19]]),
+        };
+        let payload = bytes[HEADER_SIZE..].to_vec();
+        UtpPacket { header, payload }
+    }
+}
+
+fn current_timestamp() -> u32 {
+    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u32
 }
