@@ -54,7 +54,7 @@ impl UTP {
                 match rx.try_recv() {
                     Ok((data, src_addr)) => {
                         //Self::on_receive(kademlia.as_mut(), data.as_slice(), src_addr);
-                        println!("RECEIVED")
+                        println!("RECEIVED");
                     }
                     Err(TryRecvError::Empty) => {
                     }
