@@ -2,7 +2,20 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 const HEADER_SIZE: usize = 20;
 
-// Define the uTP packet header
+/*
+0       4       8               16              24              32
++-------+-------+---------------+---------------+---------------+
+| type  | ver   | extension     | connection_id                 |
++-------+-------+---------------+---------------+---------------+
+| timestamp_microseconds                                        |
++---------------+---------------+---------------+---------------+
+| timestamp_difference_microseconds                             |
++---------------+---------------+---------------+---------------+
+| wnd_size                                                      |
++---------------+---------------+---------------+---------------+
+| seq_nr                        | ack_nr                        |
++---------------+---------------+---------------+---------------+
+*/
 #[derive(Debug)]
 pub struct UtpHeader {
     pub(crate) type_version: u8,
@@ -15,7 +28,6 @@ pub struct UtpHeader {
     pub(crate) ack_nr: u16,
 }
 
-// Define the uTP packet structure
 #[derive(Debug)]
 pub struct UtpPacket {
     pub(crate) header: UtpHeader,
