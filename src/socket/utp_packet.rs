@@ -1,6 +1,6 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const HEADER_SIZE: usize = 20; // Basic header size without extensions
+const HEADER_SIZE: usize = 20;
 
 // Define the uTP packet header
 #[derive(Debug)]
@@ -24,13 +24,14 @@ pub struct UtpPacket {
 
 
 impl UtpPacket {
+
     pub fn new(payload: Vec<u8>, conn_id: u16, seq_nr: u16, ack_nr: u16) -> Self {
-        UtpPacket {
+        Self {
             header: UtpHeader {
                 type_version: 1, // Set appropriate type and version
                 extension: 0,
                 connection_id: conn_id,
-                timestamp: current_timestamp(),
+                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u32,
                 timestamp_diff: 0,
                 wnd_size: 0,
                 seq_nr,
@@ -66,10 +67,9 @@ impl UtpPacket {
             ack_nr: u16::from_be_bytes([bytes[18], bytes[19]]),
         };
         let payload = bytes[HEADER_SIZE..].to_vec();
-        UtpPacket { header, payload }
+        Self {
+            header,
+            payload
+        }
     }
-}
-
-fn current_timestamp() -> u32 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u32
 }
