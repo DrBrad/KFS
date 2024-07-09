@@ -3,6 +3,7 @@ use std::net::{Ipv4Addr, SocketAddr, UdpSocket};
 use std::sync::Arc;
 use std::sync::mpsc::{channel, TryRecvError};
 use std::thread;
+use crate::socket::random;
 use crate::socket::utp_packet::UtpPacket;
 
 //https://www.bittorrent.org/beps/bep_0029.html
@@ -21,7 +22,7 @@ impl UtpSocket {
         let socket = UdpSocket::bind(addr)?;
         Ok(Self {
             socket,
-            conn_id: 0,//rand::random(),
+            conn_id: random::gen(),
             seq_nr: 1,
             ack_nr: 0,
         })
